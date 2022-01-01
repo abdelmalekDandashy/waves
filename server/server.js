@@ -1,23 +1,26 @@
 const express = require('express');
 const app = express();
+require('dotenv').config();
+
 const mongoose = require('mongoose');
 const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
-require('dotenv').config();
-const routes = require('./routes')
+const routes = require('./routes');
+
+const { handleError, convertToApiError } = require('./middleware/apiError');
 
 
-// 
-const mongoURi = `mongodb+srv://${process.env.DB_ADMIN}:${process.env.DB_PASS}@${process.env.DB_HOST}?retryWrites=true&w=majority`
+// mongodb+srv://admin:<password>@cluster0.kbuow.mongodb.net/myFirstDatabase?retryWrites=true&w=majority
 
-// console.log('hiiiiiiiiiiiiiiiiiiiiiiiii ' + mongoURi);
-
-mongoose.connect(mongoURi, {
+const mongoUri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@${process.env.DB_HOST}?retryWrites=true&w=majority`;
+mongoose.connect(mongoUri,{
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    useCreateIndex: true,
+    useCreateIndex:true,
     useFindAndModify: false
 });
+
+
 
 /// body parse
 app.use(express.json())
@@ -27,14 +30,19 @@ app.use(express.json())
 app.use(xss());
 app.use(mongoSanitize());
 
+
 /// routes
-app.use('/api', routes)
+app.use('/api',routes)
 
 
-
-
+/// HANDLE ERRORS
+/// if the error not recognized....convert to api error
+app.use(convertToApiError);
+app.use((err,req,res,next)=>{
+    handleError(err,res)
+})
 
 const port = process.env.PORT || 3001
-app.listen(port, () => {
+app.listen(port,()=>{
     console.log(`Server is running on port ${port}`)
 });
